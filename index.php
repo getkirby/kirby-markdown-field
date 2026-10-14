@@ -2,14 +2,12 @@
 
 use FabianMichael\MarkdownField\MarkdownField;
 use Kirby\Cms\App;
-use Kirby\Cms\File;
-use Kirby\Cms\Page;
-use Kirby\Exception\InvalidArgumentException;
 use Kirby\Http\Url;
-use Kirby\Toolkit\Str;
-use Kirby\Toolkit\Dom;
-use Kirby\Uuid\Uuid;
 use Kirby\Toolkit\A;
+use Kirby\Toolkit\Dom;
+use Kirby\Toolkit\Str;
+use Kirby\Uuid\Permalink;
+use Kirby\Uuid\Uuid;
 
 load([
 	MarkdownField::class => __DIR__ . '/src/MarkdownField.php',
@@ -44,25 +42,30 @@ App::plugin('fabianmichael/markdown-field', [
 				foreach ($elements as $element) {
 					foreach ($attributes as $attribute) {
 						if ($element->hasAttribute($attribute) && $uuid = $element->getAttribute($attribute)) {
-							// remove base url prefix
-							$uuidLinkText = Str::startsWith($uuid, $baseUrl) ? Url::short($uuid) : $uuid;
-							$uuid = Str::after($uuid, $baseUrl) ?: $uuid; // fallback to original value is Str::after() returns an empty string
+							$isAbsolute   = Str::startsWith($uuid, rtrim($baseUrl, '/') . '/@/');
+							$uuidLinkText = $isAbsolute === true ? Url::short($uuid) : $uuid;
 
-							try {
-								/** @var Page|File|null $model */
-								$model = Uuid::for($uuid)?->model();
-								if ($url = $model?->url()) {
-									$element->setAttribute($attribute, $url);
+							$model = match (true) {
+								// relative or absolute permalinks (`/@/page/…`)
+								($isAbsolute === true || Str::startsWith($uuid, '/@/') === true) &&
+								preg_match('!/@/(page|file)/[^/?#]+!', $uuid) === 1
+									=> Permalink::from($uuid)?->model(),
+								// UUIDs (`page://…`)
+								Uuid::is($uuid, ['page', 'file']) === true
+									=> Uuid::from($uuid)?->model(),
+								default
+									=> null
+							};
 
-									if (!empty($uuidLinkText) && $uuidLinkText === $element->textContent) {
-										// ensure that link text is also transformed
-										// from permalink to an actual URL if it was
-										// a permalink
-										$element->textContent = Url::short($url);
-									}
+							if ($url = $model?->url()) {
+								$element->setAttribute($attribute, $url);
+
+								if (!empty($uuidLinkText) && $uuidLinkText === $element->textContent) {
+									// ensure that link text is also transformed
+									// from permalink to an actual URL if it was
+									// a permalink
+									$element->textContent = Url::short($url);
 								}
-							} catch (InvalidArgumentException $e) {
-								// ignore anything else than permalinks
 							}
 						}
 					}
