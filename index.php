@@ -1,5 +1,6 @@
 <?php
 
+use FabianMichael\MarkdownField\MarkdownField;
 use Kirby\Cms\App;
 use Kirby\Cms\File;
 use Kirby\Cms\Page;
@@ -10,6 +11,10 @@ use Kirby\Toolkit\Dom;
 use Kirby\Uuid\Uuid;
 use Kirby\Toolkit\A;
 
+load([
+	MarkdownField::class => __DIR__ . '/src/MarkdownField.php',
+]);
+
 App::plugin('fabianmichael/markdown-field', [
 	'options' => [
 		'convertPermalinks' => false,
@@ -18,7 +23,7 @@ App::plugin('fabianmichael/markdown-field', [
 		'blocks/markdown' => __DIR__ . '/blueprints/blocks/markdown.yml',
 	],
 	'fields' => [
-		'markdown' => require __DIR__ . '/fields/markdown.php',
+		'markdown' => MarkdownField::class,
 	],
 	'hooks' => [
 		'kirbytext:after' => function (string $text): string {
