@@ -1,6 +1,6 @@
 {
   "name": "fabianmichael/kirby-markdown-field",
-  "description": "Super-sophisticated markdown editor for Kirby 4",
+  "description": "Super-sophisticated markdown editor for Kirby 6",
   "homepage": "https://github.com/fabianmichael/kirby-markdown-field",
   "type": "kirby-plugin",
   "version": "4.0.0",
