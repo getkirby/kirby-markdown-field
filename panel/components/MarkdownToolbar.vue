@@ -179,7 +179,7 @@ export default {
 
 /* Align invisibles button to the right of the toolbar */
 .k-markdown-toolbar-button-right {
-  border-left: 1px solid var(--color-background);
+  border-left: 1px solid var(--panel-color-back);
   margin-left: auto;
 }
 
