@@ -1,6 +1,6 @@
 // Global type definitions for Kirby CMS panel
 
-import { Panel } from 'kirby-types';
+import { Panel, PanelHelpers } from 'kirby-types';
 import { ButtonDefinition } from '../components/Buttons/Button';
 import Extension from '../components/Extension';
 
@@ -15,6 +15,7 @@ declare global {
 export interface InputComponent {
   $t: (key: string) => string | null;
   $go: (url: string) => void;
+  $helper: PanelHelpers;
   kirbytext?: boolean;
   knownKirbytags?: string[];
   uploads?: boolean;
