@@ -15,7 +15,7 @@
       :buttons="toolbarButtons"
       :active="active"
       :invisibles="invisibles"
-      @mousedown.native.prevent
+      @mousedown.prevent
     />
     <div
       ref="input"
@@ -73,10 +73,9 @@ export default {
       default: 'normal',
     },
   },
-  emits: ['input'],
+  emits: ['input', 'submit'],
   data() {
     return {
-      editor: Object,
       activeMarks: [],
       isDragOver: false,
       invisibles: false,
@@ -86,9 +85,6 @@ export default {
     };
   },
   computed: {
-    currentLanguage() {
-      return this.$language;
-    },
     uploadOptions() {
       return {
         url: this.$panel.urls.api + '/' + this.endpoints.field + '/upload',
@@ -105,7 +101,7 @@ export default {
   },
   watch: {
     value(newVal) {
-      if (newVal !== undefined && newVal !== this.editor.value) {
+      if (newVal !== undefined && newVal !== this.editor?.value) {
         // let scrollInfo = this.editor.getScrollInfo()
         // set the new value as the editor's content
         // this.editor.setValue(newVal)
@@ -116,6 +112,9 @@ export default {
     },
   },
   mounted() {
+    // the editor is not declared in `data` on purpose:
+    // it must not become reactive, as CodeMirror
+    // relies on the identity of its objects
     this.editor = new Editor(this.value, {
       readOnly: this.disabled,
       element: this.$refs.input,
@@ -145,7 +144,9 @@ export default {
       },
     });
 
-    this.toolbarButtons = this.editor.buttons;
+    // freezing the array keeps Vue from making
+    // the button extensions reactive
+    this.toolbarButtons = Object.freeze([...this.editor.buttons]);
 
     if (this.autofocus && !this.disabled) {
       this.focus().then(() => {
@@ -160,8 +161,8 @@ export default {
     }
   },
 
-  beforeDestroy() {
-    this.editor.destroy();
+  beforeUnmount() {
+    this.editor?.destroy();
   },
 
   methods: {
@@ -225,9 +226,11 @@ export default {
         {},
       );
 
-      if (this.buttons === true) {
+      let buttons = this.buttons;
+
+      if (buttons === true) {
         // default layout
-        this.buttons = {
+        buttons = {
           headlines: ['h1', 'h2', 'h3'],
           bold: {},
           italic: {},
@@ -245,11 +248,11 @@ export default {
 
       const layout = [];
 
-      for (let item of Object.keys(this.buttons)) {
-        item = item.replace(/__.*$/, ''); // remove divider suffix
+      for (const key of Object.keys(buttons)) {
+        const item = key.replace(/__.*$/, ''); // remove divider suffix
 
         if (mapped[item]) {
-          mapped[item].configure(this.buttons[item]);
+          mapped[item].configure(buttons[key]);
           layout.push(mapped[item]);
         }
       }
@@ -386,7 +389,7 @@ export default {
         return;
       }
       // drag & drop for text
-      if (this.$panel.drag?.type === 'text') {
+      if (this.$panel.drag.type === 'text') {
         $event.dataTransfer.dropEffect = 'copy';
         this.focus();
         this.isDragOver = true;
