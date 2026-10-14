@@ -293,16 +293,16 @@ export default {
       const insert = [];
 
       for (const file of files) {
-        if (this.kirbytext) {
+        if (this.kirbytext || !file.uuid) {
           insert.push(file.dragText);
         } else {
-          const url = '/@/file/' + file.uuid.split('://')[1];
-
-          if (file.type === 'image') {
-            insert.push(`![${file.filename}](${url})`);
-          } else {
-            insert.push(`[${file.filename}](${url})`);
-          }
+          insert.push(
+            this.markdownFileLink({
+              filename: file.filename,
+              isImage: file.mime?.startsWith('image/') ?? false,
+              uuid: file.uuid,
+            }),
+          );
         }
       }
 
@@ -315,22 +315,21 @@ export default {
     },
 
     file() {
-      this.$panel.dialog.open({
-        component: 'k-files-dialog',
-        props: {
-          endpoint: this.endpoints.field + '/files',
-          multiple: false,
-        },
+      this.$panel.dialog.open(this.endpoints.field + '/files', {
         on: {
           cancel: async () => await this.restoreSelection(),
-          submit: async (file) => {
+          submit: async ({ items }) => {
             this.$panel.dialog.close();
             await this.restoreSelection();
-
-            await this.insertFile(file);
+            await this.insertFile(items);
           },
         },
       });
+    },
+
+    markdownFileLink({ filename, isImage, uuid }) {
+      const url = '/@/file/' + uuid.split('://')[1];
+      return isImage ? `![${filename}](${url})` : `[${filename}](${url})`;
     },
 
     upload() {
@@ -357,19 +356,18 @@ export default {
         } else {
           const match = this.$panel.drag.data.match(/^\((image|file): ([^\s\)]+)/);
 
-          if (match) {
+          // only file drag texts with UUIDs can be converted to Markdown
+          if (match && match[2].includes('://')) {
             const [, type, uuid] = match;
-            const uuidValue = uuid.split('://')[1];
+            const file = await this.$helper.items('items/files', uuid);
 
-            const preview = await this.$helper.link.preview({ type: 'file', link: uuid }, [
-              'filename',
-            ]);
-
-            if (type === 'image') {
-              this.editor.insert(`![${preview.label}](/@/file/${uuidValue})`);
-            } else {
-              this.editor.insert(`[${preview.label}](/@/file/${uuidValue})`);
-            }
+            this.editor.insert(
+              this.markdownFileLink({
+                filename: file?.filename ?? uuid,
+                isImage: type === 'image',
+                uuid,
+              }),
+            );
           }
         }
       }
