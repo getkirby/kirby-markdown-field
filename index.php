@@ -42,8 +42,7 @@ App::plugin('fabianmichael/markdown-field', [
 				foreach ($elements as $element) {
 					foreach ($attributes as $attribute) {
 						if ($element->hasAttribute($attribute) && $uuid = $element->getAttribute($attribute)) {
-							$isAbsolute   = Str::startsWith($uuid, rtrim($baseUrl, '/') . '/@/');
-							$uuidLinkText = $isAbsolute === true ? Url::short($uuid) : $uuid;
+							$isAbsolute = Str::startsWith($uuid, rtrim($baseUrl, '/') . '/@/');
 
 							$model = match (true) {
 								// relative or absolute permalinks (`/@/page/…`)
@@ -60,12 +59,18 @@ App::plugin('fabianmichael/markdown-field', [
 							if ($url = $model?->url()) {
 								$element->setAttribute($attribute, $url);
 
-								if (!empty($uuidLinkText) && $uuidLinkText === $element->textContent) {
-									// ensure that link text is also transformed
-									// from permalink to an actual URL if it was
-									// a permalink
-									$element->textContent = Url::short($url);
-								}
+								// ensure that link text is also transformed
+								// from permalink to an actual URL if it was
+								// a permalink
+								$element->textContent = match (true) {
+									$element->textContent === $uuid && $isAbsolute === true
+										=> $url,
+									$element->textContent === $uuid,
+									$element->textContent === Url::short($uuid) && $isAbsolute === true
+										=> Url::short($url),
+									default
+										=> $element->textContent
+								};
 							}
 						}
 					}
